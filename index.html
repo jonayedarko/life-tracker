@@ -2446,9 +2446,12 @@ Notification.requestPermission().then(async (permission) => {
     console.log("Permission granted");
 
     try {
-      const token = await getToken(messaging, {
-        vapidKey: "BEWzis99-wSdEht3xLNMfwGAeX2htgMq8mmcBlecm-hLCyYJoBtrNBUxfWtl6e4adG2j1X0WyHg5qUlcONrM5O8"
-      });
+      const registration = await navigator.serviceWorker.getRegistration();
+
+const token = await getToken(messaging, {
+  vapidKey: "BEWzis99-wSdEht3xLNMfwGAeX2htgMq8mmcBlecm-hLCyYJoBtrNBUxfWtl6e4adG2j1X0WyHg5qUlcONrM5O8",
+  serviceWorkerRegistration: registration
+});
 
       console.log("FCM Token:", token);
     } catch (err) {
