@@ -2418,38 +2418,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script> 
   <script>
-  if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/pwabuilder-sw.js');
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/pwabuilder-sw.js')
+    .then(() => console.log("SW registered"))
+    .catch(console.error);
 }
-</script> 
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+</script>
 
-  const firebaseConfig = {
-    apiKey: "...",
-    authDomain: "...",
-    projectId: "...",
-    storageBucket: "...",
-    messagingSenderId: "...",
-    appId: "..."
-  };
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
 
-  // Ask permission
-  Notification.requestPermission().then(async (permission) => {
-    if (permission === "granted") {
-      console.log("Permission granted");
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
+Notification.requestPermission().then(async (permission) => {
+  if (permission === "granted") {
+    console.log("Permission granted");
+
+    try {
       const token = await getToken(messaging, {
-        vapidKey: "YOUR_VAPID_KEY"
+        vapidKey: "BEWzis99-wSdEht3xLNMfwGAeX2htgMq8mmcBlecm-hLCyYJoBtrNBUxfWtl6e4adG2j1X0WyHg5qUlcONrM5O8"
       });
 
       console.log("FCM Token:", token);
+    } catch (err) {
+      console.error("Token error:", err);
     }
-  });
+  }
+});
 </script>
 </body>
 </html>
