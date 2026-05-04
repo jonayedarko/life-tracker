@@ -2421,6 +2421,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/pwabuilder-sw.js');
 }
+</script> 
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+
+  const firebaseConfig = {
+    apiKey: "...",
+    authDomain: "...",
+    projectId: "...",
+    storageBucket: "...",
+    messagingSenderId: "...",
+    appId: "..."
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  // Ask permission
+  Notification.requestPermission().then(async (permission) => {
+    if (permission === "granted") {
+      console.log("Permission granted");
+
+      const token = await getToken(messaging, {
+        vapidKey: "YOUR_VAPID_KEY"
+      });
+
+      console.log("FCM Token:", token);
+    }
+  });
 </script>
 </body>
 </html>
