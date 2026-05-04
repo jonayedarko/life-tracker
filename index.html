@@ -2419,9 +2419,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </script> 
   <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/pwabuilder-sw.js')
-    .then(() => console.log("SW registered"))
-    .catch(console.error);
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./pwabuilder-sw.js')
+      .then((reg) => console.log('SW registered:', reg.scope))
+      .catch((err) => console.error('SW failed:', err));
+  });
 }
 </script>
 
