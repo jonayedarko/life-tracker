@@ -2425,7 +2425,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 </script>
 
-<script type="module">
+<script type="module"> 
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
@@ -2439,7 +2441,13 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 const messaging = getMessaging(app);
+  window.loginWithGoogle = async function () {
+  const result = await signInWithPopup(auth, provider);
+  console.log(result.user);
+};
 
 Notification.requestPermission().then(async (permission) => {
   if (permission === "granted") {
