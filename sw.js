@@ -1,10 +1,10 @@
 const CACHE_NAME = 'life-tracker-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/life-tracker/',
+  '/life-tracker/index.html',
+  '/life-tracker/manifest.json',
+  '/life-tracker/icon-192.png',
+  '/life-tracker/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
