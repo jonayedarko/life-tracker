@@ -1,0 +1,2416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Life Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #141416;
+    --bg3: #1a1a1e;
+    --bg4: #222228;
+    --border: #2a2a32;
+    --text: #f0f0f5;
+    --text2: #9090a8;
+    --text3: #5a5a70;
+    --accent: #7c6af7;
+    --accent2: #9d8fff;
+    --accent3: #3d3560;
+    --green: #4caf82;
+    --red: #f06b6b;
+    --orange: #f0a86b;
+    --blue: #6baaf0;
+    --pink: #f06bb8;
+    --yellow: #f0d96b;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+    --nav-h: 72px;
+    --top-h: 60px;
+  }
+  .light-mode {
+    --bg: #f5f5fa;
+    --bg2: #ffffff;
+    --bg3: #ebebf0;
+    --bg4: #e0e0ea;
+    --border: #dddde8;
+    --text: #0d0d1a;
+    --text2: #5a5a78;
+    --text3: #9090a8;
+    --accent: #6c5fe6;
+    --accent2: #8070f0;
+    --accent3: #e8e4ff;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: var(--font); background: var(--bg); color: var(--text); }
+  input, textarea, select, button { font-family: var(--font); }
+
+  /* ===== SCROLLBARS ===== */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ===== LOCK SCREEN ===== */
+  #lock-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; gap: 32px;
+  }
+  .lock-logo { font-size: 40px; font-weight: 700; letter-spacing: -1px; }
+  .lock-logo span { color: var(--accent); }
+  .lock-subtitle { font-size: 13px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; }
+  .pin-dots { display: flex; gap: 16px; }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent; transition: all 0.15s;
+  }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
+  .pin-keypad {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; width: 260px;
+  }
+  .pin-key {
+    aspect-ratio: 1; border-radius: 50%; border: none;
+    background: var(--bg3); color: var(--text);
+    font-size: 22px; font-weight: 500; cursor: pointer;
+    transition: all 0.1s; display: flex; align-items: center; justify-content: center;
+  }
+  .pin-key:active { background: var(--accent); transform: scale(0.92); }
+  .pin-key.del { font-size: 18px; background: transparent; color: var(--text2); }
+  .pin-key.tick { font-size: 20px; background: var(--accent); color: #fff; }
+  .pin-key.empty { background: transparent; pointer-events: none; }
+
+  /* ===== APP SHELL ===== */
+  #app { position: fixed; inset: 0; display: none; flex-direction: column; }
+  #app.visible { display: flex; }
+
+  /* ===== TOP BAR ===== */
+  .top-bar {
+    height: var(--top-h); display: flex; align-items: center;
+    justify-content: space-between; padding: 0 20px;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; position: relative; z-index: 10;
+  }
+  .top-title { font-size: 18px; font-weight: 600; }
+  .top-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: transparent; color: var(--text2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; transition: background 0.15s;
+  }
+  .icon-btn:active { background: var(--bg3); }
+
+  /* ===== 3-DOT MENU ===== */
+  .dot-menu {
+    position: absolute; right: 16px; top: calc(var(--top-h) + 4px);
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 0; min-width: 180px;
+    box-shadow: var(--shadow); z-index: 100; display: none;
+  }
+  .dot-menu.open { display: block; animation: fadeIn 0.15s; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+  .dot-menu-item {
+    padding: 12px 18px; display: flex; align-items: center; gap: 12px;
+    font-size: 14px; cursor: pointer; transition: background 0.1s;
+  }
+  .dot-menu-item:hover, .dot-menu-item:active { background: var(--bg4); }
+  .dot-menu-item svg { width: 18px; height: 18px; }
+
+  /* ===== PAGES ===== */
+  .pages { flex: 1; overflow: hidden; position: relative; }
+  .page {
+    position: absolute; inset: 0; overflow-y: auto;
+    padding: 20px 20px calc(var(--nav-h) + 20px);
+    display: none;
+  }
+  .page.active { display: block; }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    height: var(--nav-h); display: flex; align-items: center;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px; cursor: pointer;
+    padding: 8px 4px; transition: all 0.15s; border: none; background: transparent;
+    color: var(--text3);
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-item svg { width: 24px; height: 24px; }
+  .nav-label { font-size: 11px; font-weight: 500; }
+
+  /* ===== SECTION CARDS ===== */
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+  .section-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin: 20px 0 10px; }
+
+  /* ===== GREETING ===== */
+  .greeting-name { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .greeting-name span { color: var(--accent); }
+  .greeting-date { font-size: 18px; color: var(--text2); margin-top: 6px; font-weight: 500; }
+
+  /* ===== CIRCULAR PROGRESS ===== */
+  .circle-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .circle-wrap svg { transform: rotate(-90deg); }
+  .circle-bg { fill: none; stroke: var(--bg4); }
+  .circle-fill { fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+  .circle-label {
+    position: absolute; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .circle-val { font-size: 15px; font-weight: 700; }
+  .circle-sub { font-size: 10px; color: var(--text2); }
+
+  /* ===== TASKS ===== */
+  .task-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-check {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid var(--border); background: transparent;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .task-check.done { background: var(--green); border-color: var(--green); }
+  .task-check.done::after { content: '✓'; color: #fff; font-size: 13px; }
+  .task-content { flex: 1; }
+  .task-title { font-size: 15px; font-weight: 500; transition: all 0.15s; }
+  .task-title.done { text-decoration: line-through; color: var(--text3); }
+  .task-note { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .task-time { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+  .task-actions { display: flex; gap: 6px; }
+  .task-act-btn {
+    width: 28px; height: 28px; border-radius: 8px; border: none;
+    background: var(--bg3); color: var(--text2); cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .empty-state {
+    text-align: center; padding: 32px 16px; color: var(--text3); font-size: 14px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 20px; border-radius: var(--radius-sm); border: none;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:active { background: var(--accent2); transform: scale(0.97); }
+  .btn-secondary { background: var(--bg3); color: var(--text); }
+  .btn-secondary:active { background: var(--bg4); }
+  .btn-danger { background: rgba(240,107,107,0.15); color: var(--red); }
+  .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+  .btn-full { width: 100%; }
+  .fab {
+    position: fixed; bottom: calc(var(--nav-h) + 16px); right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 28px; cursor: pointer; box-shadow: 0 4px 20px rgba(124,106,247,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50; transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ===== MODAL ===== */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    z-index: 200; display: none; align-items: flex-end; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0;
+    width: 100%; max-width: 540px; max-height: 90vh;
+    overflow-y: auto; padding: 24px 20px 36px;
+    animation: slideUp 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .modal-full {
+    border-radius: var(--radius);
+    max-height: 95vh;
+  }
+
+  /* ===== FORM ELEMENTS ===== */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; letter-spacing: 0.5px; text-transform: uppercase; }
+  .form-input {
+    width: 100%; padding: 12px 14px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 15px; outline: none; transition: border 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input[type="date"], .form-input[type="time"] {
+    color-scheme: dark;
+  }
+  textarea.form-input { resize: none; min-height: 100px; }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+  select.form-input { appearance: none; cursor: pointer; }
+
+  /* ===== HABIT ITEMS ===== */
+  .habit-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .habit-item:last-child { border-bottom: none; }
+  .habit-info { flex: 1; }
+  .habit-name { font-size: 15px; font-weight: 500; }
+  .habit-status { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .habit-add-btn {
+    width: 100%; padding: 12px; background: var(--bg3); border: 1px dashed var(--border);
+    border-radius: var(--radius-sm); color: var(--text2); font-size: 14px;
+    cursor: pointer; text-align: center; margin-top: 8px;
+  }
+
+  /* ===== HEALTH TRACKERS ===== */
+  .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .health-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+  }
+  .health-card-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+  .log-entry {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { font-size: 11px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
+  .log-val { font-size: 14px; font-weight: 500; flex: 1; }
+  .log-note { font-size: 12px; color: var(--text2); }
+
+  /* ===== PRAYER ===== */
+  .prayer-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .prayer-item:last-child { border-bottom: none; }
+  .prayer-name { flex: 1; font-size: 15px; font-weight: 500; }
+  .prayer-time { font-size: 12px; color: var(--text2); }
+  .prayer-check {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--border); background: transparent;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .prayer-check.done { background: var(--green); border-color: var(--green); color: #fff; font-size: 14px; }
+
+  /* ===== JOURNAL ===== */
+  .journal-entry {
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .journal-entry:last-child { border-bottom: none; }
+  .journal-entry-date { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 4px; }
+  .journal-entry-preview { font-size: 14px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ===== HALKHATA ===== */
+  .balance-display { text-align: center; padding: 8px 0 4px; }
+  .balance-total { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+  .balance-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .account-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .account-row:last-child { border-bottom: none; }
+  .finance-entry {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .finance-entry:last-child { border-bottom: none; }
+  .fin-title { font-size: 14px; font-weight: 500; }
+  .fin-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .fin-amount { font-size: 16px; font-weight: 700; }
+  .fin-income { color: var(--green); }
+  .fin-expense { color: var(--red); }
+  .fin-transfer { color: var(--blue); }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-purple { background: rgba(124,106,247,0.2); color: var(--accent2); }
+  .badge-green { background: rgba(76,175,130,0.2); color: var(--green); }
+  .badge-red { background: rgba(240,107,107,0.2); color: var(--red); }
+  .badge-blue { background: rgba(107,170,240,0.2); color: var(--blue); }
+  .badge-orange { background: rgba(240,168,107,0.2); color: var(--orange); }
+
+  /* ===== TOGGLE ===== */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-label { font-size: 15px; }
+  .toggle-sub { font-size: 12px; color: var(--text2); }
+  .toggle {
+    width: 48px; height: 28px; border-radius: 14px;
+    background: var(--bg4); position: relative; cursor: pointer;
+    border: none; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle::after {
+    content: ''; position: absolute; width: 22px; height: 22px;
+    border-radius: 50%; background: #fff; top: 3px; left: 3px;
+    transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* ===== STEP INDICATOR ===== */
+  .step-indicator {
+    display: flex; gap: 6px; margin-bottom: 20px;
+  }
+  .step-dot {
+    height: 4px; flex: 1; border-radius: 2px; background: var(--bg4);
+  }
+  .step-dot.active { background: var(--accent); }
+
+  /* ===== CHART (simple) ===== */
+  .bar-chart { display: flex; gap: 8px; align-items: flex-end; height: 100px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 4px; transition: height 0.5s; }
+  .bar-label { font-size: 10px; color: var(--text3); }
+
+  /* ===== WATER ===== */
+  .water-glasses { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 8px 0; }
+  .water-glass {
+    font-size: 28px; cursor: pointer; opacity: 0.3; transition: all 0.15s;
+  }
+  .water-glass.filled { opacity: 1; }
+
+  /* ===== HYGIENE ===== */
+  .hygiene-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .hygiene-item:last-child { border-bottom: none; }
+  .hygiene-label { font-size: 15px; font-weight: 500; }
+  .hygiene-date { font-size: 12px; color: var(--text2); }
+
+  /* search */
+  .search-bar {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
+  }
+  .search-bar .form-input { flex: 1; }
+
+  /* archive tabs */
+  .tab-row { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
+  .tab-btn {
+    padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); font-size: 13px;
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ===== UTILS ===== */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .row { display: flex; gap: 10px; }
+  .flex-1 { flex: 1; }
+  .mt8 { margin-top: 8px; }
+  .mt16 { margin-top: 16px; }
+  .text-center { text-align: center; }
+  .text-sm { font-size: 13px; }
+  .text-muted { color: var(--text2); }
+  .fw600 { font-weight: 600; }
+  .mono { font-family: var(--mono); }
+
+  /* ===== ACCOUNT PAGE ===== */
+  .avatar {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--accent3); display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700; color: var(--accent); margin: 0 auto 16px;
+  }
+  .account-name { font-size: 22px; font-weight: 700; text-align: center; }
+  .account-email { font-size: 14px; color: var(--text2); text-align: center; margin-top: 4px; }
+
+  /* ===== SETTINGS ===== */
+  .settings-section { margin-bottom: 24px; }
+  .settings-section-title { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+
+  /* ===== OVERFLOW MENUS ===== */
+  #overlay { position: fixed; inset: 0; z-index: 90; display: none; }
+  #overlay.open { display: block; }
+
+  /* ===== QURAN ===== */
+  .radio-group { display: flex; gap: 10px; }
+  .radio-btn {
+    flex: 1; padding: 10px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: transparent;
+    color: var(--text2); font-size: 13px; cursor: pointer; text-align: center;
+    transition: all 0.15s;
+  }
+  .radio-btn.selected { border-color: var(--accent); background: rgba(124,106,247,0.1); color: var(--accent); }
+  .day-btn {
+    padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: transparent; color: var(--text2); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .day-btn.selected { border-color: var(--accent); background: rgba(124,106,247,0.15); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lock-screen">
+  <div>
+    <div class="lock-logo">Life <span>Tracker</span></div>
+  </div>
+  <div class="lock-subtitle">Enter PIN to unlock</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-keypad">
+    <button class="pin-key" data-n="1">1</button>
+    <button class="pin-key" data-n="2">2</button>
+    <button class="pin-key" data-n="3">3</button>
+    <button class="pin-key" data-n="4">4</button>
+    <button class="pin-key" data-n="5">5</button>
+    <button class="pin-key" data-n="6">6</button>
+    <button class="pin-key" data-n="7">7</button>
+    <button class="pin-key" data-n="8">8</button>
+    <button class="pin-key" data-n="9">9</button>
+    <button class="pin-key tick" id="pin-tick" onclick="checkPinManual()">✓</button>
+    <button class="pin-key" data-n="0">0</button>
+    <button class="pin-key del" id="pin-del">⌫</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="icon-btn" id="back-btn" onclick="goBack()" style="display:none;color:var(--text2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="top-title" id="top-title">Home</div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="menu-btn" onclick="toggleMenu()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3-DOT MENU -->
+  <div id="overlay" onclick="closeMenu()"></div>
+  <div class="dot-menu" id="dot-menu">
+    <div class="dot-menu-item" onclick="openPage('account');closeMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Account
+    </div>
+    <div class="dot-menu-item" onclick="openPage('settings');closeMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+    <div class="dot-menu-item" onclick="openPage('journal');closeMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Journal
+    </div>
+    <div class="dot-menu-item" onclick="openPage('halkhata');closeMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      Halkhata
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div class="pages">
+
+    <!-- HOME PAGE -->
+    <div class="page active" id="page-home">
+      <div class="greeting-name">Hi, <span id="user-name-display">Arko</span>! 👋</div>
+      <div class="greeting-date" id="today-date-display"></div>
+
+      <div class="section-label mt16">Today's Tasks</div>
+      <div class="card" id="home-tasks-container">
+        <div class="empty-state"><div class="empty-icon">📋</div>No tasks for today</div>
+      </div>
+
+    </div>
+
+    <!-- TASKS PAGE -->
+    <div class="page" id="page-tasks">
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="setTaskTab('today',this)">Today</button>
+        <button class="tab-btn" onclick="setTaskTab('past',this)">Past</button>
+        <button class="tab-btn" onclick="setTaskTab('archived',this)">Archived</button>
+      </div>
+      <div id="tasks-today-view">
+        <div class="card" id="tasks-today-list"><div class="empty-state"><div class="empty-icon">✅</div>No tasks today</div></div>
+      </div>
+      <div id="tasks-past-view" style="display:none">
+        <div class="card" id="tasks-past-list"><div class="empty-state"><div class="empty-icon">📅</div>No past tasks</div></div>
+      </div>
+      <div id="tasks-archived-view" style="display:none">
+        <div class="card" id="tasks-archived-list"><div class="empty-state"><div class="empty-icon">🗃️</div>No archived tasks</div></div>
+      </div>
+      <button class="fab" onclick="openAddTask()">+</button>
+    </div>
+
+    <!-- TRACK PAGE -->
+    <div class="page" id="page-track">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div id="track-date-display" style="font-size:18px;color:var(--text2);font-weight:500"></div>
+        <button id="nuke-btn" onclick="toggleNuke()" style="padding:7px 13px;border-radius:10px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:var(--red);color:#fff;letter-spacing:0.3px">💣 Exam Mode</button>
+      </div>
+      <div id="nuke-banner" style="display:none;background:rgba(240,107,107,0.1);border:1.5px solid var(--red);border-radius:12px;padding:9px 14px;margin-bottom:12px;font-size:13px;color:var(--red);font-weight:600;text-align:center">
+        💣 Exam Mode ON — Only Study habit shown
+      </div>
+      <div class="card">
+        <div class="card-title">Habits & Activities</div>
+        <div id="habits-list"></div>
+        <div class="habit-add-btn" onclick="openAddHabit()">+ Add Habit</div>
+      </div>
+    </div>
+
+    <!-- HEALTH PAGE -->
+    <div class="page" id="page-health">
+      <!-- Sleep -->
+      <div class="card">
+        <div class="card-title">😴 Sleep Tracker</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div class="circle-wrap">
+            <svg width="90" height="90"><circle class="circle-bg" cx="45" cy="45" r="38" stroke-width="7"/><circle class="circle-fill" cx="45" cy="45" r="38" stroke-width="7" stroke="#7c6af7" id="sleep-circle" stroke-dasharray="239" stroke-dashoffset="239"/></svg>
+            <div class="circle-label"><div class="circle-val" id="sleep-val">0h</div><div class="circle-sub">/ 8h goal</div></div>
+          </div>
+          <div style="flex:1;min-width:160px">
+            <div class="form-group"><label class="form-label">Bedtime</label><input type="time" class="form-input" id="sleep-bed" onchange="calcSleep()"></div>
+            <div class="form-group"><label class="form-label">Wake time</label><input type="time" class="form-input" id="sleep-wake" onchange="calcSleep()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sleep Reminders -->
+      <div class="card">
+        <div class="card-title">⏰ Sleep Reminders</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Notifications fire while the app is open. Add to home screen for best results.</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:18px">🌙</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Bedtime Reminder</div>
+            <input type="time" class="form-input" id="bedtime-time" style="margin-bottom:0" onchange="saveReminderTime('bedtime')">
+          </div>
+          <button class="toggle" id="bedtime-toggle" onclick="toggleReminder('bedtime')"></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">☀️</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Wake-up Alarm</div>
+            <input type="time" class="form-input" id="wakeup-time" style="margin-bottom:0" onchange="saveReminderTime('wakeup')">
+          </div>
+          <button class="toggle" id="wakeup-toggle" onclick="toggleReminder('wakeup')"></button>
+        </div>
+        <div id="reminder-msg" style="font-size:12px;color:var(--green);margin-top:8px;min-height:16px"></div>
+      </div>
+
+      <!-- Exercise -->
+      <div class="card">
+        <div class="card-title">🏃 Exercise Tracker</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+          <div class="circle-wrap">
+            <svg width="90" height="90"><circle class="circle-bg" cx="45" cy="45" r="38" stroke-width="7"/><circle class="circle-fill" cx="45" cy="45" r="38" stroke-width="7" stroke="#4caf82" id="exercise-circle" stroke-dasharray="239" stroke-dashoffset="239"/></svg>
+            <div class="circle-label"><div class="circle-val" id="exercise-val">0</div><div class="circle-sub">/ 30 min</div></div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;color:var(--text2);margin-bottom:8px">Total today: <span id="exercise-total">0</span> min</div>
+            <button class="btn btn-primary btn-sm" onclick="openExerciseLog()">+ Log Exercise</button>
+          </div>
+        </div>
+        <div id="exercise-log-list"></div>
+      </div>
+
+      <!-- Water -->
+      <div class="card">
+        <div class="card-title">💧 Water Tracker</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+          <div class="circle-wrap">
+            <svg width="90" height="90"><circle class="circle-bg" cx="45" cy="45" r="38" stroke-width="7"/><circle class="circle-fill" cx="45" cy="45" r="38" stroke-width="7" stroke="#6baaf0" id="water-circle" stroke-dasharray="239" stroke-dashoffset="239"/></svg>
+            <div class="circle-label"><div class="circle-val" id="water-count">0</div><div class="circle-sub" id="water-goal-lbl">/ 8 glasses</div></div>
+          </div>
+          <div style="flex:1">
+            <div style="margin-bottom:8px">
+              <label class="form-label">Daily Goal</label>
+              <select class="form-input" id="water-goal-sel" onchange="updateWaterGoal()">
+                <option value="6">6 glasses</option>
+                <option value="8" selected>8 glasses</option>
+                <option value="10">10 glasses</option>
+                <option value="12">12 glasses</option>
+                <option value="15">15 glasses</option>
+                <option value="20">20 glasses</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addWater()">+ 1 Glass</button>
+          </div>
+        </div>
+        <div class="water-glasses" id="water-glasses-display"></div>
+        <button class="btn btn-secondary btn-sm mt8" onclick="resetWater()">Reset</button>
+      </div>
+
+      <!-- Hygiene -->
+      <div class="card">
+        <div class="card-title">🪮 Hygiene Tracker</div>
+        <div class="hygiene-item">
+          <div><div class="hygiene-label">✂️ Haircut</div><div class="hygiene-date" id="haircut-date">Last: Never</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="logHygiene('haircut')">Log Today</button>
+        </div>
+        <div class="hygiene-item">
+          <div><div class="hygiene-label">✂️ Fingernail Trim</div><div class="hygiene-date" id="fingernails-date">Last: Never</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="logHygiene('fingernails')">Log Today</button>
+        </div>
+        <div class="hygiene-item">
+          <div><div class="hygiene-label">✂️ Toenail Trim</div><div class="hygiene-date" id="toenails-date">Last: Never</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="logHygiene('toenails')">Log Today</button>
+        </div>
+        <div class="hygiene-item">
+          <div><div class="hygiene-label">🪒 Underarm Shaving</div><div class="hygiene-date" id="underarm-date">Last: Never</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="logHygiene('underarm')">Log Today</button>
+        </div>
+        <div class="hygiene-item">
+          <div><div class="hygiene-label">🪒 Private Shaving</div><div class="hygiene-date" id="private-date">Last: Never</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="logHygiene('private')">Log Today</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAITH PAGE -->
+    <div class="page" id="page-faith">
+      <!-- Prayers -->
+      <div class="card">
+        <div class="card-title">🕌 Prayer Tracker</div>
+        <div id="prayer-list"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <span class="badge badge-green" id="prayer-badge">0 / 5 prayed</span>
+        </div>
+      </div>
+
+      <!-- Quran -->
+      <div class="card">
+        <div class="card-title">📖 Quran Tracker</div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div class="circle-wrap">
+            <svg width="90" height="90"><circle class="circle-bg" cx="45" cy="45" r="38" stroke-width="7"/><circle class="circle-fill" cx="45" cy="45" r="38" stroke-width="7" stroke="#f0d96b" id="quran-circle" stroke-dasharray="239" stroke-dashoffset="239"/></svg>
+            <div class="circle-label"><div class="circle-val" id="quran-val">0</div><div class="circle-sub">/ 30 min</div></div>
+          </div>
+          <div style="flex:1">
+            <div class="radio-group" style="margin-bottom:10px">
+              <button class="radio-btn selected" id="q-read-btn" onclick="selectQuranMode('reading')">📖 Reading</button>
+              <button class="radio-btn" id="q-listen-btn" onclick="selectQuranMode('listening')">🎧 Listening</button>
+            </div>
+            <div class="form-group"><label class="form-label">Minutes</label><input type="number" class="form-input" id="quran-minutes" placeholder="0" min="0"></div>
+            <button class="btn btn-primary btn-sm btn-full" onclick="logQuran()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fasting -->
+      <div class="card">
+        <div class="card-title">🌙 Fasting Tracker</div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Fasting today</div><div class="toggle-sub" id="fast-streak">Streak: 0 days</div></div>
+          <button class="toggle" id="fast-toggle" onclick="toggleFast()"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOURNAL PAGE -->
+    <div class="page" id="page-journal">
+      <div class="search-bar">
+        <input type="text" class="form-input" id="journal-search" placeholder="Search entries..." oninput="renderJournal()">
+      </div>
+      <div id="journal-list"></div>
+      <button class="fab" onclick="openJournalEditor()">+</button>
+    </div>
+
+    <!-- HALKHATA PAGE -->
+    <div class="page" id="page-halkhata">
+      <div class="card">
+        <div class="balance-display">
+          <div class="balance-total" id="hk-balance">৳0</div>
+          <div class="balance-label">Total Balance</div>
+        </div>
+        <div class="divider"></div>
+        <div id="hk-accounts"></div>
+      </div>
+
+      <!-- Borrow / Lend -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0">🤝 Borrowed &amp; Lent</div>
+          <button class="btn btn-primary btn-sm" onclick="openDebtModal()">+ Add</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div style="flex:1;background:rgba(240,107,107,0.1);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">I Owe</div>
+            <div id="debt-i-owe" style="font-size:20px;font-weight:700;color:var(--red)">৳0</div>
+          </div>
+          <div style="flex:1;background:rgba(76,175,130,0.1);border-radius:12px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Owed to Me</div>
+            <div id="debt-owed-me" style="font-size:20px;font-weight:700;color:var(--green)">৳0</div>
+          </div>
+        </div>
+        <div id="debt-list"></div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn" onclick="setHkTab('monthly',this)">Monthly</button>
+        <button class="tab-btn" onclick="setHkTab('yearly',this)">Yearly</button>
+      </div>
+
+      <div id="hk-entries-view">
+        <div class="card" id="hk-entries-list"></div>
+      </div>
+      <div id="hk-monthly-view" style="display:none">
+        <div class="card" id="hk-monthly-content"></div>
+      </div>
+      <div id="hk-yearly-view" style="display:none">
+        <div class="card" id="hk-yearly-content"></div>
+      </div>
+
+      <button class="fab" onclick="openAddFinance()">+</button>
+    </div>
+
+    <!-- ACCOUNT PAGE -->
+    <div class="page" id="page-account">
+      <div class="card" style="text-align:center;padding:24px">
+        <div class="avatar" id="account-avatar">A</div>
+        <div class="account-name" id="account-name-text">Arko</div>
+        <div class="account-email">Gmail sync (coming soon)</div>
+        <div style="margin-top:16px">
+          <button class="btn btn-secondary btn-sm" onclick="editUsername()">Edit Name</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Backup & Restore</div>
+        <div class="row mt8">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="exportData()">📤 Export JSON</button>
+          <button class="btn btn-secondary btn-sm flex-1" onclick="triggerImport()">📥 Import JSON</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div class="card">
+        <div class="card-title">App Info</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6">
+          <div>Version: 1.0.0</div>
+          <div>Storage: localStorage</div>
+          <div>Offline ready ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="settings-section">
+        <div class="settings-section-title">Appearance</div>
+        <div class="card">
+          <div class="toggle-row">
+            <div><div class="toggle-label">Light Mode</div><div class="toggle-sub">Toggle light / dark theme</div></div>
+            <button class="toggle" id="light-toggle" onclick="toggleLightMode()"></button>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">Focus Mode</div><div class="toggle-sub">Hide distractions</div></div>
+            <button class="toggle" id="focus-toggle" onclick="toggleFocus()"></button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Security</div>
+        <div class="card">
+          <div style="padding:4px 0">
+            <div class="toggle-label" style="margin-bottom:8px">Change PIN</div>
+            <div style="display:flex;gap:8px">
+              <input type="password" maxlength="4" class="form-input" id="old-pin" placeholder="Current PIN" style="flex:1">
+              <input type="password" maxlength="4" class="form-input" id="new-pin" placeholder="New PIN" style="flex:1">
+              <button class="btn btn-primary btn-sm" onclick="changePin()">Save</button>
+            </div>
+            <div id="pin-msg" style="font-size:12px;margin-top:6px;color:var(--green)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Notifications</div>
+        <div class="card">
+          <div class="toggle-row">
+            <div><div class="toggle-label">Task Reminders</div><div class="toggle-sub">Future feature</div></div>
+            <button class="toggle" id="notif-task-toggle" onclick="toggleSetting('notifTask','notif-task-toggle')"></button>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">Prayer Reminders</div><div class="toggle-sub">Future feature</div></div>
+            <button class="toggle" id="notif-prayer-toggle" onclick="toggleSetting('notifPrayer','notif-prayer-toggle')"></button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Data</div>
+        <div class="card">
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ Clear All Data</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end pages -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="navTo('home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="navTo('tasks',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span class="nav-label">Tasks</span>
+    </button>
+    <button class="nav-item" onclick="navTo('track',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="nav-label">Track</span>
+    </button>
+    <button class="nav-item" onclick="navTo('health',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      <span class="nav-label">Health</span>
+    </button>
+    <button class="nav-item" onclick="navTo('faith',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <span class="nav-label">Faith</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- ADD TASK MODAL -->
+<div class="modal-backdrop" id="task-modal">
+  <div class="modal">
+    <div class="step-indicator">
+      <div class="step-dot active" id="step-d1"></div>
+      <div class="step-dot" id="step-d2"></div>
+      <div class="step-dot" id="step-d3"></div>
+    </div>
+    <div id="task-step-1">
+      <div class="modal-title">New Task</div>
+      <div class="form-group"><label class="form-label">Task Title</label><input type="text" class="form-input" id="task-title-input" placeholder="What needs to be done?"></div>
+      <div class="row"><button class="btn btn-secondary flex-1" onclick="closeModal('task-modal')">Cancel</button><button class="btn btn-primary flex-1" onclick="taskStep(2)">Next →</button></div>
+    </div>
+    <div id="task-step-2" style="display:none">
+      <div class="modal-title">Add Notes</div>
+      <div class="form-group"><label class="form-label">Notes (optional)</label><textarea class="form-input" id="task-notes-input" placeholder="Any details?"></textarea></div>
+      <div class="row"><button class="btn btn-secondary flex-1" onclick="taskStep(1)">← Back</button><button class="btn btn-primary flex-1" onclick="taskStep(3)">Next →</button></div>
+    </div>
+    <div id="task-step-3" style="display:none">
+      <div class="modal-title">Set Date & Time</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="task-date-input"></div>
+        <div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="task-time-input"></div>
+      </div>
+      <div class="row"><button class="btn btn-secondary flex-1" onclick="taskStep(2)">← Back</button><button class="btn btn-primary flex-1" onclick="saveTask()">Save ✓</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD HABIT MODAL -->
+<div class="modal-backdrop" id="habit-modal">
+  <div class="modal">
+    <div class="modal-title" id="habit-modal-title">New Habit</div>
+    <div class="form-group"><label class="form-label">Habit Name</label><input type="text" class="form-input" id="habit-name-input" placeholder="e.g. Reading, Coding..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Goal (hours)</label><input type="number" class="form-input" id="habit-goal-h" placeholder="0" min="0" max="24"></div>
+      <div class="form-group"><label class="form-label">Goal (minutes)</label><input type="number" class="form-input" id="habit-goal-m" placeholder="0" min="0" max="59"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Schedule</label>
+      <select class="form-input" id="habit-schedule" onchange="toggleCustomDays()">
+        <option value="daily">Daily</option>
+        <option value="weekdays">Weekdays (Mon–Fri)</option>
+        <option value="weekends">Weekends (Sat–Sun)</option>
+        <option value="custom">Specific Days</option>
+      </select>
+    </div>
+    <div class="form-group" id="habit-custom-days" style="display:none">
+      <label class="form-label">Select Days</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="day-btn" data-day="1" onclick="toggleDayBtn(this)">Mon</button>
+        <button type="button" class="day-btn" data-day="2" onclick="toggleDayBtn(this)">Tue</button>
+        <button type="button" class="day-btn" data-day="3" onclick="toggleDayBtn(this)">Wed</button>
+        <button type="button" class="day-btn" data-day="4" onclick="toggleDayBtn(this)">Thu</button>
+        <button type="button" class="day-btn" data-day="5" onclick="toggleDayBtn(this)">Fri</button>
+        <button type="button" class="day-btn" data-day="6" onclick="toggleDayBtn(this)">Sat</button>
+        <button type="button" class="day-btn" data-day="0" onclick="toggleDayBtn(this)">Sun</button>
+      </div>
+    </div>
+    <div class="form-group" id="habit-color-group">
+      <label class="form-label">Color</label>
+      <div style="display:flex;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:#7c6af7;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#7c6af7',this)"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#4caf82;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#4caf82',this)"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#f06b6b;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#f06b6b',this)"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#6baaf0;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#6baaf0',this)"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#f0a86b;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#f0a86b',this)"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#f06bb8;cursor:pointer;border:2px solid transparent" onclick="selectHabitColor('#f06bb8',this)"></div>
+      </div>
+    </div>
+    <input type="hidden" id="habit-edit-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('habit-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveHabit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG HABIT TIME MODAL -->
+<div class="modal-backdrop" id="habit-log-modal">
+  <div class="modal">
+    <div class="modal-title">Log Time</div>
+    <div id="habit-log-name" style="font-size:13px;color:var(--text2);margin-bottom:12px"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Hours</label><input type="number" class="form-input" id="log-h" placeholder="0" min="0" max="24"></div>
+      <div class="form-group"><label class="form-label">Minutes</label><input type="number" class="form-input" id="log-m" placeholder="0" min="0" max="59"></div>
+    </div>
+    <input type="hidden" id="log-habit-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('habit-log-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveHabitLog()">Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXERCISE LOG MODAL -->
+<div class="modal-backdrop" id="exercise-modal">
+  <div class="modal">
+    <div class="modal-title">Log Exercise</div>
+    <div class="form-group"><label class="form-label">Duration (minutes)</label><input type="number" class="form-input" id="ex-min" placeholder="30" min="1"></div>
+    <div class="form-group"><label class="form-label">Type / Notes</label><input type="text" class="form-input" id="ex-note" placeholder="e.g. Running, Push-ups..."></div>
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('exercise-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveExercise()">Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOURNAL EDITOR MODAL -->
+<div class="modal-backdrop" id="journal-modal">
+  <div class="modal modal-full">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0" id="journal-modal-title">New Entry</div>
+      <button class="icon-btn" onclick="closeModal('journal-modal')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;font-family:var(--mono)" id="journal-entry-datetime"></div>
+    <textarea class="form-input" id="journal-content" style="min-height:260px;margin-bottom:12px" placeholder="Write anything..."></textarea>
+    <div style="margin-bottom:12px">
+      <label class="form-label">Attachment (optional)</label>
+      <input type="file" class="form-input" id="journal-file" accept="image/*,.pdf,.doc,.docx" style="padding:8px">
+    </div>
+    <input type="hidden" id="journal-edit-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('journal-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveJournal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINANCE MODAL -->
+<div class="modal-backdrop" id="finance-modal">
+  <div class="modal">
+    <div class="modal-title" id="fin-modal-title">New Entry</div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" class="form-input" id="fin-title" placeholder="e.g. Salary, Rent..."></div>
+    <div class="form-group"><label class="form-label">Amount (৳)</label><input type="number" class="form-input" id="fin-amount" placeholder="0" min="0"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="fin-type">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+          <option value="transfer">Transfer</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Account</label>
+        <select class="form-input" id="fin-account">
+          <option value="bank">Bank</option>
+          <option value="bkash">bKash</option>
+          <option value="nagad">Nagad</option>
+          <option value="card">Card</option>
+          <option value="cash">Cash</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Notes (optional)</label><input type="text" class="form-input" id="fin-notes" placeholder="Optional notes"></div>
+    <input type="hidden" id="fin-edit-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('finance-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveFinance()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- NUKE CONFIRM MODAL -->
+<div class="modal-backdrop" id="nuke-modal">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:44px;margin-bottom:6px" id="nuke-modal-icon">💣</div>
+    <div class="modal-title" id="nuke-modal-title">Activate Exam Mode?</div>
+    <div style="font-size:13px;color:var(--text2);margin:8px 0 20px" id="nuke-modal-desc">All habits except <strong>Study</strong> will be hidden until you turn this off. Your data is safe.</div>
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('nuke-modal')">Cancel</button>
+      <button class="btn flex-1" id="nuke-confirm-btn" onclick="confirmNuke()" style="background:var(--red);color:#fff;border:none">Yes, Do It</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBT MODAL -->
+<div class="modal-backdrop" id="debt-modal">
+  <div class="modal">
+    <div class="modal-title" id="debt-modal-title">Add Entry</div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <div class="radio-group">
+        <button class="radio-btn selected" id="debt-type-borrow" onclick="setDebtType('borrowed')">😬 I Borrowed</button>
+        <button class="radio-btn" id="debt-type-lent" onclick="setDebtType('lent')">🤝 I Lent</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Person's Name</label><input type="text" class="form-input" id="debt-person" placeholder="e.g. Rahim bhai"></div>
+    <div class="form-group"><label class="form-label">Amount (৳)</label><input type="number" class="form-input" id="debt-amount" placeholder="0" min="0"></div>
+    <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" class="form-input" id="debt-note" placeholder="What for?"></div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-input" id="debt-status">
+        <option value="pending">Pending</option>
+        <option value="settled">Settled ✓</option>
+      </select>
+    </div>
+    <input type="hidden" id="debt-edit-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('debt-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveDebt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT TASK MODAL -->
+<div class="modal-backdrop" id="edit-task-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Task</div>
+    <div class="form-group"><label class="form-label">Title</label><input type="text" class="form-input" id="edit-task-title"></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="edit-task-notes" style="min-height:80px"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="edit-task-date"></div>
+      <div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="edit-task-time"></div>
+    </div>
+    <input type="hidden" id="edit-task-id">
+    <div class="row">
+      <button class="btn btn-secondary flex-1" onclick="closeModal('edit-task-modal')">Cancel</button>
+      <button class="btn btn-primary flex-1" onclick="saveEditTask()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+const KEYS = {
+  pin: 'arkoos_pin',
+  tasks: 'arkoos_tasks',
+  habits: 'arkoos_habits',
+  habitLogs: 'arkoos_habitlogs',
+  sleep: 'arkoos_sleep',
+  exercise: 'arkoos_exercise',
+  water: 'arkoos_water',
+  hygiene: 'arkoos_hygiene',
+  prayers: 'arkoos_prayers',
+  quran: 'arkoos_quran',
+  fasting: 'arkoos_fasting',
+  journal: 'arkoos_journal',
+  finance: 'arkoos_finance',
+  settings: 'arkoos_settings',
+  username: 'arkoos_username',
+};
+
+function load(key, def=null) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+}
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ============================================================
+// SETTINGS
+// ============================================================
+let settings = load(KEYS.settings, { lightMode: false, focus: false, notifTask: false, notifPrayer: false });
+function saveSettings() { save(KEYS.settings, settings); }
+
+function applyTheme() {
+  document.body.classList.toggle('light-mode', settings.lightMode);
+  document.getElementById('light-toggle').classList.toggle('on', settings.lightMode);
+}
+function toggleLightMode() {
+  settings.lightMode = !settings.lightMode;
+  saveSettings(); applyTheme();
+}
+function toggleFocus() {
+  settings.focus = !settings.focus;
+  saveSettings();
+  document.getElementById('focus-toggle').classList.toggle('on', settings.focus);
+}
+function toggleSetting(key, id) {
+  settings[key] = !settings[key];
+  saveSettings();
+  document.getElementById(id).classList.toggle('on', settings[key]);
+}
+function applySettings() {
+  applyTheme();
+  document.getElementById('focus-toggle').classList.toggle('on', settings.focus);
+  document.getElementById('notif-task-toggle').classList.toggle('on', settings.notifTask);
+  document.getElementById('notif-prayer-toggle').classList.toggle('on', settings.notifPrayer);
+}
+
+// ============================================================
+// PIN SYSTEM
+// ============================================================
+let pinInput = '';
+const DEFAULT_PIN = '1234';
+
+function initPin() {
+  document.querySelectorAll('.pin-key[data-n]').forEach(btn => {
+    btn.onclick = () => addPinDigit(btn.dataset.n);
+  });
+  const delBtn = document.getElementById('pin-del');
+  if (delBtn) delBtn.onclick = delPinDigit;
+}
+
+function addPinDigit(d) {
+  if (pinInput.length >= 4) return;
+  pinInput += d;
+  updatePinDots();
+  if (pinInput.length === 4) checkPin();
+}
+function delPinDigit() { pinInput = pinInput.slice(0,-1); updatePinDots(); }
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i < pinInput.length);
+    document.getElementById('d'+i).classList.remove('error');
+  }
+}
+function checkPinManual() { if (pinInput.length > 0) checkPin(); }
+function checkPin() {
+  const stored = load(KEYS.pin, DEFAULT_PIN);
+  if (pinInput === stored) {
+    unlockApp();
+  } else {
+    for (let i=0;i<4;i++) document.getElementById('d'+i).classList.add('error');
+    setTimeout(() => { pinInput = ''; updatePinDots(); }, 600);
+  }
+}
+function unlockApp() {
+  document.getElementById('lock-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  initApp();
+}
+function changePin() {
+  const oldP = document.getElementById('old-pin').value;
+  const newP = document.getElementById('new-pin').value;
+  const stored = load(KEYS.pin, DEFAULT_PIN);
+  const msg = document.getElementById('pin-msg');
+  if (oldP !== stored) { msg.style.color='var(--red)'; msg.textContent='Incorrect current PIN'; return; }
+  if (newP.length !== 4 || !/^\d{4}$/.test(newP)) { msg.style.color='var(--red)'; msg.textContent='PIN must be 4 digits'; return; }
+  save(KEYS.pin, newP);
+  msg.style.color='var(--green)'; msg.textContent='PIN changed successfully!';
+  document.getElementById('old-pin').value=''; document.getElementById('new-pin').value='';
+  setTimeout(()=>msg.textContent='',2000);
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+let currentPage = 'home';
+let pageHistory = [];
+const navPages = ['home','tasks','track','health','faith'];
+const pageTitles = { home:'Home', tasks:'Tasks', track:'Habits', health:'Health', faith:'Faith', journal:'Journal', halkhata:'Halkhata', account:'Account', settings:'Settings' };
+
+function goBack() {
+  if (pageHistory.length > 1) {
+    pageHistory.pop(); // remove current
+    const prev = pageHistory[pageHistory.length - 1];
+    pageHistory.pop(); // will be re-added by openPage
+    openPage(prev);
+    // sync nav highlight
+    const navIdx = navPages.indexOf(prev);
+    document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active', i===navIdx));
+  }
+}
+
+function updateBackBtn() {
+  const btn = document.getElementById('back-btn');
+  if (btn) btn.style.display = (pageHistory.length > 1) ? 'flex' : 'none';
+}
+
+function navTo(page, el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  openPage(page);
+}
+function openPage(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg = document.getElementById('page-'+page);
+  if (pg) { pg.classList.add('active'); currentPage = page; }
+  document.getElementById('top-title').textContent = pageTitles[page] || page;
+  pageHistory.push(page);
+  if (pageHistory.length > 20) pageHistory.shift();
+  updateBackBtn();
+  refreshPage(page);
+}
+function refreshPage(page) {
+  if (page === 'home') { renderHome(); }
+  if (page === 'tasks') { renderTasks(); }
+  if (page === 'track') { renderHabits(); }
+  if (page === 'health') { renderHealth(); }
+  if (page === 'faith') { renderFaith(); }
+  if (page === 'journal') { renderJournal(); }
+  if (page === 'halkhata') { renderHalkhata(); }
+  if (page === 'account') { renderAccount(); }
+  if (page === 'settings') { applySettings(); }
+}
+
+// ============================================================
+// 3-DOT MENU
+// ============================================================
+function toggleMenu() {
+  document.getElementById('dot-menu').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeMenu() {
+  document.getElementById('dot-menu').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ============================================================
+// MODAL UTILS
+// ============================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ============================================================
+// DATES
+// ============================================================
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function nowStr() { return new Date().toISOString(); }
+function formatDate(iso) {
+  const d = new Date(iso);
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDateTime(iso) {
+  return formatDate(iso.slice(0,10)) + ' · ' + fmtTime(iso);
+}
+
+// ============================================================
+// HOME PAGE
+// ============================================================
+function renderHome() {
+  document.getElementById('today-date-display').textContent = formatDate(todayStr());
+  const uname = load(KEYS.username, 'Arko');
+  document.getElementById('user-name-display').textContent = uname;
+
+  // Today tasks
+  const tasks = load(KEYS.tasks, []).filter(t => t.date === todayStr() && !t.archived);
+  const container = document.getElementById('home-tasks-container');
+  if (tasks.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>No tasks for today</div>';
+  } else {
+    container.innerHTML = tasks.map(t => taskItemHTML(t, true)).join('');
+  }
+
+}
+
+function renderHomeHabits() {
+  const habits = load(KEYS.habits, []);
+  const container = document.getElementById('home-habits-container');
+  if (habits.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div>No habits set up</div>';
+    return;
+  }
+  const logs = load(KEYS.habitLogs, {});
+  const td = todayStr();
+  container.innerHTML = habits.map(h => {
+    const logged = (logs[h.id] && logs[h.id][td]) || 0;
+    const goal = (h.goalH||0)*60 + (h.goalM||0);
+    const pct = goal > 0 ? Math.min(logged/goal,1) : 0;
+    const loggedStr = formatHM(logged);
+    const goalStr = formatHM(goal);
+    const circ = circleHTML(60, pct, h.color||'var(--accent)', loggedStr, goalStr);
+    return `<div class="habit-item">${circ}<div class="habit-info"><div class="habit-name">${h.name}</div><div class="habit-status">${loggedStr} / ${goalStr}</div></div></div>`;
+  }).join('');
+}
+
+// ============================================================
+// TASKS
+// ============================================================
+let currentTaskStep = 1;
+let taskEditId = null;
+let habitColorSelected = '#7c6af7';
+
+function openAddTask() {
+  taskEditId = null; currentTaskStep = 1;
+  document.getElementById('task-title-input').value = '';
+  document.getElementById('task-notes-input').value = '';
+  const d = new Date();
+  document.getElementById('task-date-input').value = todayStr();
+  document.getElementById('task-time-input').value = d.toTimeString().slice(0,5);
+  taskStep(1);
+  openModal('task-modal');
+}
+
+function taskStep(n) {
+  currentTaskStep = n;
+  document.getElementById('task-step-1').style.display = n===1?'block':'none';
+  document.getElementById('task-step-2').style.display = n===2?'block':'none';
+  document.getElementById('task-step-3').style.display = n===3?'block':'none';
+  for (let i=1;i<=3;i++) document.getElementById('step-d'+i).classList.toggle('active', i<=n);
+}
+
+function saveTask() {
+  const title = document.getElementById('task-title-input').value.trim();
+  if (!title) return alert('Please enter a task title');
+  const notes = document.getElementById('task-notes-input').value.trim();
+  const date = document.getElementById('task-date-input').value;
+  const time = document.getElementById('task-time-input').value;
+  const tasks = load(KEYS.tasks, []);
+  tasks.push({ id: uid(), title, notes, date, time, done: false, archived: false, created: nowStr() });
+  save(KEYS.tasks, tasks);
+  closeModal('task-modal');
+  renderTasks(); renderHome();
+}
+
+function setTaskTab(tab, el) {
+  document.querySelectorAll('#page-tasks .tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tasks-today-view').style.display = tab==='today'?'block':'none';
+  document.getElementById('tasks-past-view').style.display = tab==='past'?'block':'none';
+  document.getElementById('tasks-archived-view').style.display = tab==='archived'?'block':'none';
+}
+
+function renderTasks() {
+  const tasks = load(KEYS.tasks, []);
+  const td = todayStr();
+
+  // Today
+  const today = tasks.filter(t => t.date === td && !t.archived);
+  const tl = document.getElementById('tasks-today-list');
+  tl.innerHTML = today.length ? today.map(t => taskItemHTML(t, false)).join('') : '<div class="empty-state"><div class="empty-icon">✅</div>No tasks today</div>';
+
+  // Past
+  const past = tasks.filter(t => t.date < td && !t.archived).sort((a,b)=>b.date.localeCompare(a.date));
+  const pl = document.getElementById('tasks-past-list');
+  pl.innerHTML = past.length ? past.map(t => taskItemHTML(t, true, true)).join('') : '<div class="empty-state"><div class="empty-icon">📅</div>No past tasks</div>';
+
+  // Archived
+  const arch = tasks.filter(t => t.archived).sort((a,b)=>b.created.localeCompare(a.created));
+  const al = document.getElementById('tasks-archived-list');
+  al.innerHTML = arch.length ? arch.map(t => `
+    <div class="task-item">
+      <div class="task-content">
+        <div class="task-title done">${t.title}</div>
+        ${t.notes?`<div class="task-note">${t.notes}</div>`:''}
+        <div class="task-time">${t.date} ${t.time}</div>
+      </div>
+      <div class="task-actions">
+        <button class="task-act-btn" onclick="restoreTask('${t.id}')" title="Restore">↩</button>
+        <button class="task-act-btn" style="color:var(--red)" onclick="deleteTaskPerm('${t.id}')" title="Delete">✕</button>
+      </div>
+    </div>`).join('') : '<div class="empty-state"><div class="empty-icon">🗃️</div>No archived tasks</div>';
+}
+
+function taskItemHTML(t, readonly=false, isPast=false) {
+  const isToday = t.date === todayStr();
+  const canEdit = isToday && !readonly;
+  return `<div class="task-item">
+    <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.id}')"></div>
+    <div class="task-content">
+      <div class="task-title ${t.done?'done':''}">${t.title}</div>
+      ${t.notes?`<div class="task-note">${t.notes}</div>`:''}
+      <div class="task-time">${t.date} ${t.time?'· '+t.time:''}</div>
+    </div>
+    <div class="task-actions">
+      ${canEdit?`<button class="task-act-btn" onclick="openEditTask('${t.id}')">✏️</button>`:''}
+      <button class="task-act-btn" style="color:var(--red)" onclick="archiveTask('${t.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function toggleTask(id) {
+  const tasks = load(KEYS.tasks, []);
+  const t = tasks.find(t=>t.id===id);
+  if (t) { t.done = !t.done; save(KEYS.tasks, tasks); renderTasks(); renderHome(); }
+}
+function archiveTask(id) {
+  if (!confirm('Move this task to archive?')) return;
+  const tasks = load(KEYS.tasks, []);
+  const t = tasks.find(t=>t.id===id);
+  if (t) { t.archived = true; save(KEYS.tasks, tasks); renderTasks(); renderHome(); }
+}
+function restoreTask(id) {
+  const tasks = load(KEYS.tasks, []);
+  const t = tasks.find(t=>t.id===id);
+  if (t) { t.archived = false; save(KEYS.tasks, tasks); renderTasks(); }
+}
+function deleteTaskPerm(id) {
+  if (!confirm('Permanently delete?')) return;
+  const tasks = load(KEYS.tasks, []).filter(t=>t.id!==id);
+  save(KEYS.tasks, tasks); renderTasks();
+}
+function openEditTask(id) {
+  const tasks = load(KEYS.tasks, []);
+  const t = tasks.find(t=>t.id===id);
+  if (!t) return;
+  document.getElementById('edit-task-id').value = id;
+  document.getElementById('edit-task-title').value = t.title;
+  document.getElementById('edit-task-notes').value = t.notes||'';
+  document.getElementById('edit-task-date').value = t.date;
+  document.getElementById('edit-task-time').value = t.time||'';
+  openModal('edit-task-modal');
+}
+function saveEditTask() {
+  const id = document.getElementById('edit-task-id').value;
+  const tasks = load(KEYS.tasks, []);
+  const t = tasks.find(t=>t.id===id);
+  if (!t) return;
+  t.title = document.getElementById('edit-task-title').value.trim() || t.title;
+  t.notes = document.getElementById('edit-task-notes').value.trim();
+  t.date = document.getElementById('edit-task-date').value;
+  t.time = document.getElementById('edit-task-time').value;
+  save(KEYS.tasks, tasks);
+  closeModal('edit-task-modal');
+  renderTasks(); renderHome();
+}
+
+// ============================================================
+// HABITS
+// ============================================================
+function toggleCustomDays() {
+  const sel = document.getElementById('habit-schedule').value;
+  document.getElementById('habit-custom-days').style.display = sel === 'custom' ? 'block' : 'none';
+}
+
+function toggleDayBtn(el) {
+  el.classList.toggle('selected');
+}
+
+function openAddHabit(id=null) {
+  const habits = load(KEYS.habits, []);
+  const h = id ? habits.find(h=>h.id===id) : null;
+  document.getElementById('habit-modal-title').textContent = h ? 'Edit Habit' : 'New Habit';
+  document.getElementById('habit-name-input').value = h?.name||'';
+  document.getElementById('habit-goal-h').value = h?.goalH||'';
+  document.getElementById('habit-goal-m').value = h?.goalM||'';
+  document.getElementById('habit-schedule').value = h?.schedule||'daily';
+  document.getElementById('habit-edit-id').value = h?.id||'';
+  habitColorSelected = h?.color||'#7c6af7';
+  // Custom days
+  toggleCustomDays();
+  const customDays = h?.customDays || [];
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.classList.toggle('selected', customDays.includes(parseInt(btn.dataset.day)));
+  });
+  openModal('habit-modal');
+}
+
+function selectHabitColor(c, el) {
+  habitColorSelected = c;
+  document.querySelectorAll('#habit-color-group > div > div').forEach(d=>d.style.border='2px solid transparent');
+  el.style.border = '2px solid var(--text)';
+}
+
+function saveHabit() {
+  const name = document.getElementById('habit-name-input').value.trim();
+  if (!name) return alert('Enter habit name');
+  const goalH = parseInt(document.getElementById('habit-goal-h').value)||0;
+  const goalM = parseInt(document.getElementById('habit-goal-m').value)||0;
+  const schedule = document.getElementById('habit-schedule').value;
+  const customDays = schedule === 'custom' ?
+    Array.from(document.querySelectorAll('.day-btn.selected')).map(b=>parseInt(b.dataset.day)) : [];
+  const editId = document.getElementById('habit-edit-id').value;
+  const habits = load(KEYS.habits, []);
+  if (editId) {
+    const h = habits.find(h=>h.id===editId);
+    if (h) { h.name=name; h.goalH=goalH; h.goalM=goalM; h.schedule=schedule; h.customDays=customDays; h.color=habitColorSelected; }
+  } else {
+    habits.push({ id:uid(), name, goalH, goalM, schedule, customDays, color:habitColorSelected });
+  }
+  save(KEYS.habits, habits);
+  closeModal('habit-modal');
+  renderHabits(); renderHome();
+}
+
+function deleteHabit(id) {
+  if (!confirm('Delete habit?')) return;
+  const habits = load(KEYS.habits, []).filter(h=>h.id!==id);
+  save(KEYS.habits, habits); renderHabits(); renderHome();
+}
+
+function openLogHabit(id) {
+  const habits = load(KEYS.habits, []);
+  const h = habits.find(h=>h.id===id);
+  document.getElementById('habit-log-name').textContent = h?.name||'';
+  document.getElementById('log-habit-id').value = id;
+  document.getElementById('log-h').value = '';
+  document.getElementById('log-m').value = '';
+  openModal('habit-log-modal');
+}
+
+function saveHabitLog() {
+  const id = document.getElementById('log-habit-id').value;
+  const h = parseInt(document.getElementById('log-h').value)||0;
+  const m = parseInt(document.getElementById('log-m').value)||0;
+  const mins = h*60 + m;
+  const logs = load(KEYS.habitLogs, {});
+  if (!logs[id]) logs[id] = {};
+  logs[id][todayStr()] = (logs[id][todayStr()]||0) + mins;
+  save(KEYS.habitLogs, logs);
+  closeModal('habit-log-modal');
+  renderHabits(); renderHome();
+}
+
+function formatHM(mins) {
+  if (mins < 60) return mins + 'm';
+  const h = Math.floor(mins/60), m = mins%60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function circleHTML(size, pct, color, val, sub) {
+  const r = (size/2)*0.84; const c = 2*Math.PI*r;
+  const offset = c - pct*c;
+  return `<div class="circle-wrap" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}">
+      <circle class="circle-bg" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${size*0.08}"/>
+      <circle class="circle-fill" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${size*0.08}" stroke="${color}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" style="transform:rotate(-90deg);transform-origin:center"/>
+    </svg>
+    <div class="circle-label"><div class="circle-val" style="font-size:${size>70?15:12}px">${val}</div><div class="circle-sub">${sub}</div></div>
+  </div>`;
+}
+
+function renderHabits() {
+  updateNukeUI();
+  // Update date display
+  const dateEl = document.getElementById('track-date-display');
+  if (dateEl) {
+    const now = new Date();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    dateEl.textContent = days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+  }
+  const examMode = load('examMode', false);
+  let habits = load(KEYS.habits, []);
+  if (examMode) habits = habits.filter(h => h.name.toLowerCase().includes('study'));
+  const logs = load(KEYS.habitLogs, {});
+  const td = todayStr();
+  const todayDow = new Date().getDay();
+  const container = document.getElementById('habits-list');
+  if (habits.length === 0) {
+    container.innerHTML = examMode
+      ? '<div class="empty-state"><div class="empty-icon">📚</div>No habit named "Study" found. Add one!</div>'
+      : '<div class="empty-state"><div class="empty-icon">🎯</div>No habits yet</div>';
+    return;
+  }
+  const visibleHabits = habits.filter(h => {
+    if (!h.schedule || h.schedule === 'daily') return true;
+    if (h.schedule === 'weekdays') return todayDow >= 1 && todayDow <= 5;
+    if (h.schedule === 'weekends') return todayDow === 0 || todayDow === 6;
+    if (h.schedule === 'custom' && h.customDays) return h.customDays.includes(todayDow);
+    return true;
+  });
+  container.innerHTML = (visibleHabits.length === 0 ? '<div class="empty-state"><div class="empty-icon">📅</div>No habits scheduled for today</div>' :
+    visibleHabits.map(h => {
+      const logged = (logs[h.id] && logs[h.id][td]) || 0;
+      const goal = (h.goalH||0)*60 + (h.goalM||0);
+      const pct = goal > 0 ? logged/goal : 0;
+      const loggedStr = formatHM(logged);
+      const goalStr = formatHM(goal);
+      const circ = circleHTML(72, Math.min(pct,1), h.color||'var(--accent)', loggedStr, goalStr);
+      return `<div class="habit-item">
+        ${circ}
+        <div class="habit-info">
+          <div class="habit-name">${h.name}</div>
+          <div class="habit-status">${loggedStr} / ${goalStr} · ${h.schedule==='custom'?'Custom days':h.schedule}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-direction:column">
+          <button class="task-act-btn" onclick="openLogHabit('${h.id}')">⏱</button>
+          <button class="task-act-btn" onclick="openAddHabit('${h.id}')">✏️</button>
+          <button class="task-act-btn" style="color:var(--red)" onclick="deleteHabit('${h.id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('')) +
+    (visibleHabits.length < habits.length ? `<div style="margin-top:10px;font-size:12px;color:var(--text3);text-align:center">${habits.length - visibleHabits.length} habit(s) not scheduled today</div>` : '');
+}
+
+// ============================================================
+// HEALTH
+// ============================================================
+function calcSleep() {
+  const bed = document.getElementById('sleep-bed').value;
+  const wake = document.getElementById('sleep-wake').value;
+  if (!bed || !wake) return;
+  let bm = timeToMins(bed), wm = timeToMins(wake);
+  if (wm <= bm) wm += 1440;
+  const dur = (wm - bm) / 60;
+  const td = todayStr();
+  const sleep = load(KEYS.sleep, {});
+  sleep[td] = { bed, wake, duration: dur };
+  save(KEYS.sleep, sleep);
+  updateSleepUI(dur);
+}
+
+function timeToMins(t) {
+  const [h,m] = t.split(':').map(Number); return h*60+m;
+}
+
+function updateSleepUI(dur) {
+  const pct = Math.min(dur/8, 1);
+  const c = 2*Math.PI*38;
+  document.getElementById('sleep-circle').setAttribute('stroke-dashoffset', (c - pct*c).toFixed(1));
+  document.getElementById('sleep-val').textContent = dur.toFixed(1)+'h';
+}
+
+function renderHealth() {
+  const td = todayStr();
+
+  // Sleep
+  const sleep = load(KEYS.sleep, {})[td];
+  if (sleep) {
+    document.getElementById('sleep-bed').value = sleep.bed||'';
+    document.getElementById('sleep-wake').value = sleep.wake||'';
+    updateSleepUI(sleep.duration);
+  }
+  renderReminders();
+
+  // Exercise
+  renderExercise();
+
+  // Water
+  renderWater();
+
+  // Hygiene
+  const hygiene = load(KEYS.hygiene, {});
+  document.getElementById('haircut-date').textContent = hygiene.haircut ? 'Last: ' + hygiene.haircut : 'Last: Never';
+  document.getElementById('fingernails-date').textContent = hygiene.fingernails ? 'Last: ' + hygiene.fingernails : 'Last: Never';
+  document.getElementById('toenails-date').textContent = hygiene.toenails ? 'Last: ' + hygiene.toenails : 'Last: Never';
+  document.getElementById('underarm-date').textContent = hygiene.underarm ? 'Last: ' + hygiene.underarm : 'Last: Never';
+  document.getElementById('private-date').textContent = hygiene.private ? 'Last: ' + hygiene.private : 'Last: Never';
+}
+
+function openExerciseLog() {
+  document.getElementById('ex-min').value = '';
+  document.getElementById('ex-note').value = '';
+  openModal('exercise-modal');
+}
+function saveExercise() {
+  const min = parseInt(document.getElementById('ex-min').value)||0;
+  const note = document.getElementById('ex-note').value.trim();
+  if (!min) return alert('Enter minutes');
+  const ex = load(KEYS.exercise, []);
+  ex.push({ id:uid(), date:todayStr(), min, note, time:nowStr() });
+  save(KEYS.exercise, ex);
+  closeModal('exercise-modal');
+  renderExercise();
+}
+function renderExercise() {
+  const td = todayStr();
+  const ex = load(KEYS.exercise, []).filter(e=>e.date===td);
+  const total = ex.reduce((s,e)=>s+e.min,0);
+  const pct = Math.min(total/30,1);
+  const c = 2*Math.PI*38;
+  document.getElementById('exercise-circle').setAttribute('stroke-dashoffset', (c-pct*c).toFixed(1));
+  document.getElementById('exercise-val').textContent = total;
+  document.getElementById('exercise-total').textContent = total;
+  const list = document.getElementById('exercise-log-list');
+  list.innerHTML = ex.length ? ex.map(e=>`<div class="log-entry">
+    <div class="log-time">${fmtTime(e.time)}</div>
+    <div><div class="log-val">${e.min} min</div>${e.note?`<div class="log-note">${e.note}</div>`:''}</div>
+    <button class="task-act-btn" style="color:var(--red)" onclick="deleteExercise('${e.id}')">✕</button>
+  </div>`).join('') : '';
+}
+function deleteExercise(id) {
+  if (!confirm('Delete this exercise log?')) return;
+  save(KEYS.exercise, load(KEYS.exercise,[]).filter(e=>e.id!==id));
+  renderExercise();
+}
+
+function renderWater() {
+  const td = todayStr();
+  const water = load(KEYS.water, {});
+  const count = water[td]||0;
+  const goal = settings.waterGoal || 8;
+  document.getElementById('water-goal-sel').value = goal;
+  const pct = Math.min(count/goal,1);
+  const c = 2*Math.PI*38;
+  document.getElementById('water-circle').setAttribute('stroke-dashoffset',(c-pct*c).toFixed(1));
+  document.getElementById('water-count').textContent = count;
+  document.getElementById('water-goal-lbl').textContent = '/ '+goal+' glasses';
+  const gd = document.getElementById('water-glasses-display');
+  let html = '';
+  const displayCount = Math.max(goal, count);
+  for (let i=0;i<displayCount;i++) html+=`<div class="water-glass ${i<count?'filled':''}" onclick="setWater(${i+1})">💧</div>`;
+  gd.innerHTML = html;
+}
+
+function addWater() {
+  const td = todayStr();
+  const water = load(KEYS.water, {});
+  const goal = settings.waterGoal||8;
+  water[td] = (water[td]||0)+1;
+  save(KEYS.water, water);
+  renderWater(); renderHome();
+}
+
+function setWater(n) {
+  const td = todayStr();
+  const water = load(KEYS.water, {});
+  water[td] = n; save(KEYS.water, water);
+  renderWater(); renderHome();
+}
+
+function resetWater() {
+  const td = todayStr();
+  const water = load(KEYS.water, {});
+  water[td] = 0; save(KEYS.water, water);
+  renderWater(); renderHome();
+}
+
+function updateWaterGoal() {
+  const g = parseInt(document.getElementById('water-goal-sel').value);
+  settings.waterGoal = g; saveSettings();
+  renderWater();
+}
+
+function logHygiene(type) {
+  const hygiene = load(KEYS.hygiene, {});
+  hygiene[type] = todayStr();
+  save(KEYS.hygiene, hygiene);
+  renderHealth();
+}
+
+// ============================================================
+// FAITH
+// ============================================================
+const PRAYERS = ['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+
+function renderFaith() {
+  const td = todayStr();
+  const prayers = load(KEYS.prayers, {});
+  if (!prayers[td]) prayers[td] = {};
+  const pl = document.getElementById('prayer-list');
+  pl.innerHTML = PRAYERS.map(p => `<div class="prayer-item">
+    <div class="prayer-name">${p}</div>
+    <div class="prayer-check ${prayers[td][p]?'done':''}" onclick="togglePrayer('${p}')">${prayers[td][p]?'✓':''}</div>
+  </div>`).join('');
+  const count = Object.values(prayers[td]).filter(Boolean).length;
+  document.getElementById('prayer-badge').textContent = count+' / 5 prayed';
+
+  // Quran
+  const quran = load(KEYS.quran, {});
+  const qd = quran[td]||{mins:0,mode:'reading'};
+  const pct = Math.min((qd.mins||0)/30,1);
+  const c = 2*Math.PI*38;
+  document.getElementById('quran-circle').setAttribute('stroke-dashoffset',(c-pct*c).toFixed(1));
+  document.getElementById('quran-val').textContent = qd.mins||0;
+  document.getElementById('quran-minutes').value = qd.mins||'';
+  selectQuranMode(qd.mode||'reading');
+
+  // Fasting
+  const fasting = load(KEYS.fasting, {});
+  const isFasting = !!fasting[td];
+  document.getElementById('fast-toggle').classList.toggle('on', isFasting);
+  const streak = calcFastStreak(fasting, td);
+  document.getElementById('fast-streak').textContent = 'Streak: '+streak+' days';
+}
+
+function togglePrayer(name) {
+  const td = todayStr();
+  const prayers = load(KEYS.prayers, {});
+  if (!prayers[td]) prayers[td] = {};
+  prayers[td][name] = !prayers[td][name];
+  save(KEYS.prayers, prayers);
+  renderFaith(); renderHome();
+}
+
+function selectQuranMode(mode) {
+  const qm = mode||'reading';
+  document.getElementById('q-read-btn').classList.toggle('selected', qm==='reading');
+  document.getElementById('q-listen-btn').classList.toggle('selected', qm==='listening');
+}
+
+function logQuran() {
+  const mins = parseInt(document.getElementById('quran-minutes').value)||0;
+  const mode = document.getElementById('q-read-btn').classList.contains('selected') ? 'reading' : 'listening';
+  const td = todayStr();
+  const quran = load(KEYS.quran, {});
+  quran[td] = { mins, mode };
+  save(KEYS.quran, quran);
+  renderFaith(); renderHome();
+}
+
+function toggleFast() {
+  const td = todayStr();
+  const fasting = load(KEYS.fasting, {});
+  fasting[td] = !fasting[td];
+  save(KEYS.fasting, fasting);
+  document.getElementById('fast-toggle').classList.toggle('on', !!fasting[td]);
+  const streak = calcFastStreak(fasting, td);
+  document.getElementById('fast-streak').textContent = 'Streak: '+streak+' days';
+}
+
+function calcFastStreak(fasting, today) {
+  let d = new Date(today); let streak = 0;
+  while (true) {
+    const ds = d.toISOString().slice(0,10);
+    if (fasting[ds]) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+// ============================================================
+// JOURNAL
+// ============================================================
+function openJournalEditor(id=null) {
+  const journal = load(KEYS.journal, []);
+  const entry = id ? journal.find(j=>j.id===id) : null;
+  document.getElementById('journal-modal-title').textContent = entry ? 'Edit Entry' : 'New Entry';
+  document.getElementById('journal-content').value = entry?.content||'';
+  document.getElementById('journal-edit-id').value = entry?.id||'';
+  document.getElementById('journal-entry-datetime').textContent = entry ? fmtDateTime(entry.created) : fmtDateTime(nowStr());
+  document.getElementById('journal-file').value = '';
+  openModal('journal-modal');
+}
+
+function saveJournal() {
+  const content = document.getElementById('journal-content').value.trim();
+  if (!content) return alert('Write something first');
+  const editId = document.getElementById('journal-edit-id').value;
+  const journal = load(KEYS.journal, []);
+  if (editId) {
+    const e = journal.find(j=>j.id===editId);
+    if (e) { e.content = content; e.updated = nowStr(); }
+  } else {
+    journal.unshift({ id:uid(), content, created:nowStr() });
+  }
+  save(KEYS.journal, journal);
+  closeModal('journal-modal');
+  renderJournal();
+}
+
+function deleteJournalEntry(id) {
+  if (!confirm('Delete entry?')) return;
+  save(KEYS.journal, load(KEYS.journal,[]).filter(j=>j.id!==id));
+  renderJournal();
+}
+
+function renderJournal() {
+  const q = document.getElementById('journal-search').value.toLowerCase();
+  let journal = load(KEYS.journal, []);
+  if (q) journal = journal.filter(j=>j.content.toLowerCase().includes(q)||j.created.includes(q));
+  const list = document.getElementById('journal-list');
+  if (journal.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📔</div>No entries yet</div>';
+    return;
+  }
+  list.innerHTML = '<div class="card">' + journal.map(j=>`
+    <div class="journal-entry">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1" onclick="openJournalEditor('${j.id}')">
+          <div class="journal-entry-date">${fmtDateTime(j.created)}${j.updated?' · edited':''}</div>
+          <div class="journal-entry-preview">${j.content.replace(/\n/g,' ')}</div>
+        </div>
+        <button class="task-act-btn" style="color:var(--red);margin-left:8px" onclick="deleteJournalEntry('${j.id}')">🗑</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+// ============================================================
+// HALKHATA
+// ============================================================
+function openAddFinance(id=null) {
+  const fin = load(KEYS.finance, []);
+  const e = id ? fin.find(f=>f.id===id) : null;
+  document.getElementById('fin-modal-title').textContent = e ? 'Edit Entry' : 'New Entry';
+  document.getElementById('fin-title').value = e?.title||'';
+  document.getElementById('fin-amount').value = e?.amount||'';
+  document.getElementById('fin-type').value = e?.type||'expense';
+  document.getElementById('fin-account').value = e?.account||'cash';
+  document.getElementById('fin-notes').value = e?.notes||'';
+  document.getElementById('fin-edit-id').value = e?.id||'';
+  openModal('finance-modal');
+}
+
+function saveFinance() {
+  const title = document.getElementById('fin-title').value.trim();
+  const amount = parseFloat(document.getElementById('fin-amount').value)||0;
+  if (!title || !amount) return alert('Fill title and amount');
+  const type = document.getElementById('fin-type').value;
+  const account = document.getElementById('fin-account').value;
+  const notes = document.getElementById('fin-notes').value.trim();
+  const editId = document.getElementById('fin-edit-id').value;
+  const fin = load(KEYS.finance, []);
+  if (editId) {
+    const e = fin.find(f=>f.id===editId);
+    if (e) { e.title=title; e.amount=amount; e.type=type; e.account=account; e.notes=notes; }
+  } else {
+    fin.unshift({ id:uid(), title, amount, type, account, notes, date:nowStr() });
+  }
+  save(KEYS.finance, fin);
+  closeModal('finance-modal');
+  renderHalkhata();
+}
+
+function deleteFinance(id) {
+  if (!confirm('Delete entry?')) return;
+  save(KEYS.finance, load(KEYS.finance,[]).filter(f=>f.id!==id));
+  renderHalkhata();
+}
+
+function setHkTab(tab, el) {
+  document.querySelectorAll('#page-halkhata .tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('hk-entries-view').style.display = tab==='entries'?'block':'none';
+  document.getElementById('hk-monthly-view').style.display = tab==='monthly'?'block':'none';
+  document.getElementById('hk-yearly-view').style.display = tab==='yearly'?'block':'none';
+  if (tab==='monthly') renderHkMonthly();
+  if (tab==='yearly') renderHkYearly();
+}
+
+function renderHalkhata() {
+  const fin = load(KEYS.finance, []);
+  const accounts = { bank:0, bkash:0, nagad:0, card:0, cash:0 };
+  let totalIncome = 0, totalExpense = 0;
+  fin.forEach(e => {
+    if (e.type==='income') { accounts[e.account]=(accounts[e.account]||0)+e.amount; totalIncome+=e.amount; }
+    if (e.type==='expense') { accounts[e.account]=(accounts[e.account]||0)-e.amount; totalExpense+=e.amount; }
+  });
+  const balance = totalIncome - totalExpense;
+  document.getElementById('hk-balance').textContent = '৳'+balance.toLocaleString();
+
+  const acEl = document.getElementById('hk-accounts');
+  const acNames = { bank:'🏦 Bank', bkash:'📱 bKash', nagad:'📱 Nagad', card:'💳 Card', cash:'💵 Cash' };
+  acEl.innerHTML = Object.entries(accounts).filter(([_,v])=>v!==0).map(([k,v])=>`
+    <div class="account-row">
+      <div>${acNames[k]||k}</div>
+      <div class="fw600 ${v>=0?'fin-income':'fin-expense'}">৳${Math.abs(v).toLocaleString()}</div>
+    </div>`).join('') || '<div class="text-muted text-sm text-center" style="padding:8px">No transactions</div>';
+
+  const list = document.getElementById('hk-entries-list');
+  list.innerHTML = fin.length ? fin.map(e=>`
+    <div class="finance-entry">
+      <div>
+        <div class="fin-title">${e.title}</div>
+        <div class="fin-meta">${fmtDateTime(e.date)} · ${e.account}${e.notes?' · '+e.notes:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="fin-amount fin-${e.type}">৳${e.amount.toLocaleString()}</div>
+        <button class="task-act-btn" onclick="openAddFinance('${e.id}')">✏️</button>
+        <button class="task-act-btn" style="color:var(--red)" onclick="deleteFinance('${e.id}')">🗑</button>
+      </div>
+    </div>`).join('') : '<div class="empty-state"><div class="empty-icon">💰</div>No entries yet</div>';
+  renderDebts();
+}
+
+function renderHkMonthly() {
+  const fin = load(KEYS.finance, []);
+  const now = new Date();
+  const ym = now.toISOString().slice(0,7);
+  const monthly = fin.filter(e=>e.date.slice(0,7)===ym);
+  const income = monthly.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const expense = monthly.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const el = document.getElementById('hk-monthly-content');
+  el.innerHTML = `
+    <div class="card-title">${now.toLocaleString('default',{month:'long'})} ${now.getFullYear()}</div>
+    <div class="account-row"><div>📈 Income</div><div class="fin-income fw600">৳${income.toLocaleString()}</div></div>
+    <div class="account-row"><div>📉 Expense</div><div class="fin-expense fw600">৳${expense.toLocaleString()}</div></div>
+    <div class="account-row"><div>💰 Net</div><div class="fw600 ${income-expense>=0?'fin-income':'fin-expense'}">৳${(income-expense).toLocaleString()}</div></div>
+    <div class="divider"></div>
+    <div class="card-title">Breakdown</div>
+    ${renderBarChart(monthly)}
+  `;
+}
+
+function renderHkYearly() {
+  const fin = load(KEYS.finance, []);
+  const year = new Date().getFullYear();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const data = months.map((m,i)=>{
+    const ym = year+'-'+(i+1).toString().padStart(2,'0');
+    const mfin = fin.filter(e=>e.date.slice(0,7)===ym);
+    return {
+      label:m,
+      income:mfin.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0),
+      expense:mfin.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)
+    };
+  });
+  const maxVal = Math.max(...data.map(d=>Math.max(d.income,d.expense)),1);
+  const el = document.getElementById('hk-yearly-content');
+  const totalIncome = data.reduce((s,d)=>s+d.income,0);
+  const totalExpense = data.reduce((s,d)=>s+d.expense,0);
+  el.innerHTML = `
+    <div class="card-title">${year} Summary</div>
+    <div class="account-row"><div>Total Income</div><div class="fin-income fw600">৳${totalIncome.toLocaleString()}</div></div>
+    <div class="account-row"><div>Total Expense</div><div class="fin-expense fw600">৳${totalExpense.toLocaleString()}</div></div>
+    <div class="account-row"><div>Net Savings</div><div class="fw600 ${totalIncome-totalExpense>=0?'fin-income':'fin-expense'}">৳${(totalIncome-totalExpense).toLocaleString()}</div></div>
+    <div class="divider"></div>
+    <div class="card-title">Monthly Chart</div>
+    <div class="bar-chart">
+      ${data.map(d=>`<div class="bar-col">
+        <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:80px;gap:2px">
+          <div class="bar" style="background:var(--green);height:${(d.income/maxVal*76).toFixed(1)}px"></div>
+          <div class="bar" style="background:var(--red);height:${(d.expense/maxVal*76).toFixed(1)}px"></div>
+        </div>
+        <div class="bar-label">${d.label}</div>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:12px">
+      <div style="display:flex;gap:4px;align-items:center"><div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Income</div>
+      <div style="display:flex;gap:4px;align-items:center"><div style="width:10px;height:10px;border-radius:2px;background:var(--red)"></div>Expense</div>
+    </div>
+  `;
+}
+
+function renderBarChart(entries) {
+  if (!entries.length) return '<div class="text-muted text-sm">No data</div>';
+  const cats = {};
+  entries.filter(e=>e.type==='expense').forEach(e=>{
+    const key = e.account;
+    cats[key] = (cats[key]||0)+e.amount;
+  });
+  const maxVal = Math.max(...Object.values(cats),1);
+  return `<div class="bar-chart">
+    ${Object.entries(cats).map(([k,v])=>`<div class="bar-col">
+      <div class="bar" style="height:${(v/maxVal*80).toFixed(1)}px"></div>
+      <div class="bar-label">${k}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ============================================================
+// ACCOUNT
+// ============================================================
+function renderAccount() {
+  const uname = load(KEYS.username, 'Arko');
+  document.getElementById('account-name-text').textContent = uname;
+  document.getElementById('account-avatar').textContent = uname.charAt(0).toUpperCase();
+  document.getElementById('user-name-display').textContent = uname;
+}
+
+function editUsername() {
+  const cur = load(KEYS.username, 'Arko');
+  const n = prompt('Enter your name:', cur);
+  if (n && n.trim()) {
+    save(KEYS.username, n.trim());
+    renderAccount(); renderHome();
+  }
+}
+
+function exportData() {
+  const data = {};
+  Object.entries(KEYS).forEach(([k,v])=>{ data[k] = load(v); });
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'arkoos-backup-'+todayStr()+'.json';
+  a.click();
+}
+
+function triggerImport() { document.getElementById('import-file').click(); }
+
+function importData(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.entries(KEYS).forEach(([k,v])=>{ if (data[k] !== undefined) save(v, data[k]); });
+      alert('Data imported successfully!');
+      initApp();
+    } catch { alert('Invalid backup file'); }
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData() {
+  if (!confirm('Clear ALL data? This cannot be undone.')) return;
+  Object.values(KEYS).forEach(k=>localStorage.removeItem(k));
+  alert('All data cleared. Refresh to start fresh.');
+}
+
+// ============================================================
+// EXAM MODE (NUKE)
+// ============================================================
+function toggleNuke() {
+  const active = load('examMode', false);
+  const icon = document.getElementById('nuke-modal-icon');
+  const title = document.getElementById('nuke-modal-title');
+  const desc = document.getElementById('nuke-modal-desc');
+  const btn = document.getElementById('nuke-confirm-btn');
+  if (!active) {
+    icon.textContent = '💣';
+    title.textContent = 'Activate Exam Mode?';
+    desc.innerHTML = 'All habits except <strong>Study</strong> will be hidden. Your data stays safe.';
+    btn.textContent = 'Yes, Activate';
+    btn.style.background = 'var(--red)';
+  } else {
+    icon.textContent = '✅';
+    title.textContent = 'Deactivate Exam Mode?';
+    desc.textContent = 'All your habits will resume showing as normal.';
+    btn.textContent = 'Yes, Deactivate';
+    btn.style.background = 'var(--green)';
+  }
+  openModal('nuke-modal');
+}
+
+function confirmNuke() {
+  const active = load('examMode', false);
+  save('examMode', !active);
+  closeModal('nuke-modal');
+  updateNukeUI();
+  renderHabits();
+}
+
+function updateNukeUI() {
+  const active = load('examMode', false);
+  const btn = document.getElementById('nuke-btn');
+  const banner = document.getElementById('nuke-banner');
+  if (btn) {
+    btn.style.background = active ? 'var(--green)' : 'var(--red)';
+    btn.textContent = active ? '✅ Exam Mode ON' : '💣 Exam Mode';
+  }
+  if (banner) banner.style.display = active ? 'block' : 'none';
+}
+
+// ============================================================
+// SLEEP REMINDERS
+// ============================================================
+let _reminderInterval = null;
+let _lastFiredBed = '';
+let _lastFiredWake = '';
+
+function renderReminders() {
+  const r = load('sleepReminders', {});
+  const bt = document.getElementById('bedtime-time');
+  const wt = document.getElementById('wakeup-time');
+  const btog = document.getElementById('bedtime-toggle');
+  const wtog = document.getElementById('wakeup-toggle');
+  if (bt) bt.value = r.bedtimeTime || '';
+  if (wt) wt.value = r.wakeupTime || '';
+  if (btog) btog.classList.toggle('on', !!r.bedtimeOn);
+  if (wtog) wtog.classList.toggle('on', !!r.wakeupOn);
+  refreshReminderMsg();
+}
+
+function saveReminderTime(type) {
+  const r = load('sleepReminders', {});
+  if (type === 'bedtime') r.bedtimeTime = document.getElementById('bedtime-time').value;
+  else r.wakeupTime = document.getElementById('wakeup-time').value;
+  save('sleepReminders', r);
+}
+
+function toggleReminder(type) {
+  const r = load('sleepReminders', {});
+  const timeVal = type === 'bedtime'
+    ? document.getElementById('bedtime-time').value
+    : document.getElementById('wakeup-time').value;
+  if (!timeVal && !(type === 'bedtime' ? r.bedtimeOn : r.wakeupOn)) {
+    showReminderMsg('Set a time first!', 'var(--red)'); return;
+  }
+  if (type === 'bedtime') { r.bedtimeOn = !r.bedtimeOn; if (timeVal) r.bedtimeTime = timeVal; }
+  else { r.wakeupOn = !r.wakeupOn; if (timeVal) r.wakeupTime = timeVal; }
+  save('sleepReminders', r);
+  if (r.bedtimeOn || r.wakeupOn) requestNotifPermission();
+  renderReminders();
+}
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showReminderMsg(msg, color) {
+  const el = document.getElementById('reminder-msg');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--green)'; }
+}
+
+function refreshReminderMsg() {
+  const r = load('sleepReminders', {});
+  const parts = [];
+  if (r.bedtimeOn && r.bedtimeTime) parts.push('Bedtime: ' + r.bedtimeTime);
+  if (r.wakeupOn && r.wakeupTime) parts.push('Alarm: ' + r.wakeupTime);
+  showReminderMsg(parts.length ? '✓ Active — ' + parts.join(' · ') : '', 'var(--green)');
+}
+
+function startReminderLoop() {
+  if (_reminderInterval) clearInterval(_reminderInterval);
+  _reminderInterval = setInterval(checkReminders, 30000);
+  checkReminders();
+}
+
+function checkReminders() {
+  const r = load('sleepReminders', {});
+  const now = new Date();
+  const hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  if (r.bedtimeOn && r.bedtimeTime === hhmm && _lastFiredBed !== hhmm) {
+    _lastFiredBed = hhmm;
+    fireNotif('🌙 Bedtime', "Time to wind down and sleep!");
+  }
+  if (r.wakeupOn && r.wakeupTime === hhmm && _lastFiredWake !== hhmm) {
+    _lastFiredWake = hhmm;
+    fireNotif('☀️ Wake Up!', "Good morning! Rise and shine!");
+  }
+}
+
+function fireNotif(title, body) {
+  if (!('Notification' in window)) { alert(title + '\n' + body); return; }
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body });
+  } else if (Notification.permission === 'default') {
+    Notification.requestPermission().then(p => { if (p === 'granted') new Notification(title, { body }); });
+  } else {
+    alert(title + '\n' + body); // fallback if blocked
+  }
+}
+
+// ============================================================
+// DEBT TRACKER (Borrow / Lend)
+// ============================================================
+let _debtType = 'borrowed';
+
+function setDebtType(type) {
+  _debtType = type;
+  document.getElementById('debt-type-borrow').classList.toggle('selected', type === 'borrowed');
+  document.getElementById('debt-type-lent').classList.toggle('selected', type === 'lent');
+}
+
+function openDebtModal(id=null) {
+  const debts = load('lt_debts', []);
+  const d = id ? debts.find(x=>x.id===id) : null;
+  document.getElementById('debt-modal-title').textContent = d ? 'Edit Entry' : 'Add Entry';
+  document.getElementById('debt-person').value = d?.person || '';
+  document.getElementById('debt-amount').value = d?.amount || '';
+  document.getElementById('debt-note').value = d?.note || '';
+  document.getElementById('debt-status').value = d?.status || 'pending';
+  document.getElementById('debt-edit-id').value = d?.id || '';
+  _debtType = d?.type || 'borrowed';
+  setDebtType(_debtType);
+  openModal('debt-modal');
+}
+
+function saveDebt() {
+  const person = document.getElementById('debt-person').value.trim();
+  const amount = parseFloat(document.getElementById('debt-amount').value)||0;
+  if (!person || !amount) return alert('Enter a name and amount');
+  const note = document.getElementById('debt-note').value.trim();
+  const status = document.getElementById('debt-status').value;
+  const editId = document.getElementById('debt-edit-id').value;
+  const debts = load('lt_debts', []);
+  if (editId) {
+    const d = debts.find(x=>x.id===editId);
+    if (d) Object.assign(d, { person, amount, note, status, type: _debtType });
+  } else {
+    debts.unshift({ id:uid(), person, amount, note, status, type: _debtType, date: todayStr() });
+  }
+  save('lt_debts', debts);
+  closeModal('debt-modal');
+  renderDebts();
+}
+
+function deleteDebt(id) {
+  if (!confirm('Delete this entry?')) return;
+  save('lt_debts', load('lt_debts',[]).filter(d=>d.id!==id));
+  renderDebts();
+}
+
+function toggleDebtSettled(id) {
+  const debts = load('lt_debts', []);
+  const d = debts.find(x=>x.id===id);
+  if (d) d.status = d.status === 'settled' ? 'pending' : 'settled';
+  save('lt_debts', debts);
+  renderDebts();
+}
+
+function renderDebts() {
+  const debts = load('lt_debts', []);
+  const iOwe = debts.filter(d=>d.type==='borrowed'&&d.status==='pending').reduce((s,d)=>s+d.amount, 0);
+  const owedMe = debts.filter(d=>d.type==='lent'&&d.status==='pending').reduce((s,d)=>s+d.amount, 0);
+  const iOweEl = document.getElementById('debt-i-owe');
+  const owedEl = document.getElementById('debt-owed-me');
+  if (iOweEl) iOweEl.textContent = '৳' + iOwe.toLocaleString();
+  if (owedEl) owedEl.textContent = '৳' + owedMe.toLocaleString();
+
+  const list = document.getElementById('debt-list');
+  if (!list) return;
+  if (!debts.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:10px 0"><div class="empty-icon" style="font-size:24px">🤝</div>No entries yet</div>';
+    return;
+  }
+  const pending = debts.filter(d=>d.status==='pending');
+  const settled = debts.filter(d=>d.status==='settled');
+  let html = pending.map(d=>debtRowHTML(d)).join('');
+  if (settled.length) {
+    html += `<div style="font-size:11px;color:var(--text3);margin:12px 0 6px;text-transform:uppercase;letter-spacing:1px">Settled</div>`;
+    html += settled.map(d=>debtRowHTML(d)).join('');
+  }
+  list.innerHTML = html;
+}
+
+function debtRowHTML(d) {
+  const isBorrow = d.type === 'borrowed';
+  const settled = d.status === 'settled';
+  return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);opacity:${settled?0.45:1}">
+    <div style="font-size:22px">${isBorrow?'😬':'🤝'}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14px">${d.person}</div>
+      <div style="font-size:12px;color:var(--text2)">${isBorrow?'I borrowed':'I lent'}${d.note?' · '+d.note:''} · ${d.date}</div>
+    </div>
+    <div style="font-weight:700;font-size:15px;color:${isBorrow?'var(--red)':'var(--green)'}">৳${Number(d.amount).toLocaleString()}</div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <button class="task-act-btn" title="${settled?'Mark Pending':'Settle'}" onclick="toggleDebtSettled('${d.id}')">${settled?'↩':'✓'}</button>
+      <button class="task-act-btn" onclick="openDebtModal('${d.id}')">✏️</button>
+      <button class="task-act-btn" style="color:var(--red)" onclick="deleteDebt('${d.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function initApp() {
+  applySettings();
+  renderHome();
+}
+
+// Start
+document.addEventListener('DOMContentLoaded', () => {
+  initPin();
+  const today = todayStr();
+  const ti = document.getElementById('task-date-input');
+  if (ti) ti.value = today;
+  startReminderLoop();
+});
+</script>
+</body>
+</html>
