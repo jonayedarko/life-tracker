@@ -2444,11 +2444,18 @@ const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const messaging = getMessaging(app);
-  window.loginWithGoogle = async function () {
-  const result = await signInWithPopup(auth, provider);
-  console.log(result.user);
-};
+  window.loginWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
+    console.log("User logged in:", user);
+
+    alert("Welcome " + user.displayName);
+  } catch (error) {
+    console.error("Login error:", error);
+  }
+};
 Notification.requestPermission().then(async (permission) => {
   if (permission === "granted") {
     console.log("Permission granted");
