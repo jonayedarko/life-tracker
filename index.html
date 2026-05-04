@@ -2416,6 +2416,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (ti) ti.value = today;
   startReminderLoop();
 });
+</script> 
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
 </script>
 </body>
 </html>
